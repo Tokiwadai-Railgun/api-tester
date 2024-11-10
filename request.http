@@ -1,0 +1,24 @@
+[TEST1]
+GET https://google.com
+200
+
+
+
+[TEST2]
+GET https://google.com
+200
+
+
+[TEST3]
+GET https://google.com
+200
+
+
+
+
+
+
+
+[TEST4]
+GET https://google.com
+300
