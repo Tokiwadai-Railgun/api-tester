@@ -31,7 +31,7 @@ GET localhost:3000/cats
 [Try to upload cats]
 POST localhost:3000/cats
 DATA {...}
-200
+201
 ```
 
 ``api-tester requests.http``
