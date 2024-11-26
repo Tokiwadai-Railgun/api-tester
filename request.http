@@ -8,17 +8,15 @@ GET https://google.com
 GET https://google.com
 200
 
-
 [TEST3]
 GET https://google.com
 200
 
-
-
-
-
-
-
 [TEST4]
 GET https://google.com
 300
+
+[Test Post Request]
+POST https://dummyjson.com/posts/add
+DATA {"title": "I am in love with someone.", "userId": 5, "body": "Your post content here"}
+201

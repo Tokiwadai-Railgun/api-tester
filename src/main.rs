@@ -1,10 +1,12 @@
 use std::fs;
 use regex::Regex;
+use ureq::serde_json::Value;
 
 struct Request {
     title: String,
     method: String,
     url: String,
+    body: Option<String>,
     expected_code: u16
 }
 fn main() {
@@ -22,9 +24,27 @@ fn main() {
     })
 }
 
-fn request(request_data: &Request) -> Result<bool, Box<ureq::Error>>{
-    let status = ureq::get(&request_data.url).call()?.status();
-    Ok(status == request_data.expected_code)
+fn request(request_data: &Request) -> Result<bool, Box<dyn std::error::Error>> {
+    match request_data.method.as_str() {
+        "GET" => {
+            let status = ureq::get(&request_data.url).call()?.status();
+            Ok(status == request_data.expected_code)
+        },
+        "POST" => {
+            if request_data.body.is_none() {panic!("Data must be entered for post requests")};
+
+            // convert body to json
+            let json_body: Value = ureq::serde_json::from_str(request_data.body.clone().unwrap().as_str())?;
+
+            let resp = ureq::post(&request_data.url)
+                .set("Content-Type", "application/json")
+                .send_json(json_body);
+            // println!("Response Body {}", resp?.into_string().unwrap());
+            let status = resp?.status();
+            Ok(status == request_data.expected_code)
+        },
+        _ => panic!("Method not supported")
+    }
 }
 
 
@@ -49,9 +69,19 @@ fn read_file_content(filepath: String) -> Result<Vec<Request>, std::io::Error> {
         let request_line: Vec<&str> = request_data.next().unwrap().split(" ").collect();
         let method = String::from(request_line[0]);
         let url = String::from(request_line[1]);
+        let mut body = None;
+
+        // if method is post then get the body from the next line
+        if method.eq("POST") {
+            let mut line = request_data.next().unwrap().split(' ');
+            if !line.next().unwrap().eq("DATA") && line.clone().count() == 2 {panic!("Data must be entered for post requests")};
+
+            body = Some(line.collect::<Vec<_>>().join(" "));
+        }
+
         let expected_code: u16 = request_data.next().unwrap_or("201").parse().unwrap_or(201);
 
-        Some(Request { title, method, url, expected_code})
+        Some(Request { title, method, url, expected_code, body})
     }).collect();
 
     Ok(requests_result)

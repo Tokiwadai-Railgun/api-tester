@@ -5,4 +5,4 @@ edition = "2021"
 
 [dependencies]
 regex = "1.11.1"
-ureq = "2.10.1"
+ureq = {version = "2.10.1", features = ["json"]}
