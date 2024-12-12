@@ -1,13 +1,14 @@
 use std::fs;
 use regex::Regex;
-use ureq::serde_json::Value;
+use ureq::serde_json::{to_string, Value};
 
 struct Request {
     title: String,
     method: String,
     url: String,
     body: Option<String>,
-    expected_code: u16
+    expected_code: u16,
+    expected_body: Option<String>
 }
 fn main() {
     let file_argument: Vec<_> = std::env::args().collect();
@@ -35,13 +36,17 @@ fn request(request_data: &Request) -> Result<bool, Box<dyn std::error::Error>> {
 
             // convert body to json
             let json_body: Value = ureq::serde_json::from_str(request_data.body.clone().unwrap().as_str())?;
+            let expected_json_body: Value = ureq::serde_json::from_str(request_data.expected_body.clone().unwrap().as_str())?;
 
             let resp = ureq::post(&request_data.url)
                 .set("Content-Type", "application/json")
                 .send_json(json_body);
             // println!("Response Body {}", resp?.into_string().unwrap());
-            let status = resp?.status();
-            Ok(status == request_data.expected_code)
+            let resp = resp?;
+            let status = resp.status();
+            let body: Value = resp.into_json()?;
+            // println!("Response bodu : {body}");
+            Ok(status == request_data.expected_code && body == expected_json_body)
         },
         _ => panic!("Method not supported")
     }
@@ -80,8 +85,11 @@ fn read_file_content(filepath: String) -> Result<Vec<Request>, std::io::Error> {
         }
 
         let expected_code: u16 = request_data.next().unwrap_or("201").parse().unwrap_or(201);
+        
+        // check if we want to look for the response body
+        let expected_body = request_data.next().map(|line| line.to_string()); // If None then the map funciton returns None by default
 
-        Some(Request { title, method, url, expected_code, body})
+        Some(Request { title, method, url, expected_code, body, expected_body })
     }).collect();
 
     Ok(requests_result)

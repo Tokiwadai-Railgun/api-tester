@@ -2,8 +2,6 @@
 GET https://google.com
 200
 
-
-
 [TEST2]
 GET https://google.com
 200
@@ -20,3 +18,4 @@ GET https://google.com
 POST https://dummyjson.com/posts/add
 DATA {"title": "I am in love with someone.", "userId": 5, "body": "Your post content here"}
 201
+{"userId":5, "id":252,"title":"I am in love with someone.","body":"Your post content here"}
