@@ -28,15 +28,23 @@ fn main() {
 fn request(request_data: &Request) -> Result<bool, Box<dyn std::error::Error>> {
     match request_data.method.as_str() {
         "GET" => {
-            let status = ureq::get(&request_data.url).call()?.status();
-            Ok(status == request_data.expected_code)
+            let req = ureq::get(&request_data.url).call()?;
+            let status = req.status();
+
+            if request_data.expected_body.is_none() {
+                return Ok(status == request_data.expected_code)
+            }
+
+            let expected_json_body: Value = ureq::serde_json::from_str(request_data.expected_body.clone().unwrap().as_str()).unwrap();
+            let body: Value = req.into_json().unwrap_or("{}".into());
+            Ok(status == request_data.expected_code && body == expected_json_body)
         },
         "POST" => {
             if request_data.body.is_none() {panic!("Data must be entered for post requests")};
 
             // convert body to json
             let json_body: Value = ureq::serde_json::from_str(request_data.body.clone().unwrap().as_str())?;
-            let expected_json_body: Value = ureq::serde_json::from_str(request_data.expected_body.clone().unwrap().as_str())?;
+
 
             let resp = ureq::post(&request_data.url)
                 .set("Content-Type", "application/json")
@@ -46,6 +54,11 @@ fn request(request_data: &Request) -> Result<bool, Box<dyn std::error::Error>> {
             let status = resp.status();
             let body: Value = resp.into_json()?;
             // println!("Response bodu : {body}");
+            if request_data.expected_body.is_none() {
+                return Ok(status == request_data.expected_code)
+            }
+
+            let expected_json_body: Value = ureq::serde_json::from_str(request_data.expected_body.clone().unwrap().as_str())?;
             Ok(status == request_data.expected_code && body == expected_json_body)
         },
         _ => panic!("Method not supported")
@@ -87,7 +100,8 @@ fn read_file_content(filepath: String) -> Result<Vec<Request>, std::io::Error> {
         let expected_code: u16 = request_data.next().unwrap_or("201").parse().unwrap_or(201);
         
         // check if we want to look for the response body
-        let expected_body = request_data.next().map(|line| line.to_string()); // If None then the map funciton returns None by default
+        let mut expected_body = request_data.next().map(|line| line.to_string()); // If None then the map funciton returns None by default
+        if expected_body == Some(String::new()) {expected_body = None;}
 
         Some(Request { title, method, url, expected_code, body, expected_body })
     }).collect();

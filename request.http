@@ -19,3 +19,14 @@ POST https://dummyjson.com/posts/add
 DATA {"title": "I am in love with someone.", "userId": 5, "body": "Your post content here"}
 201
 {"userId":5, "id":252,"title":"I am in love with someone.","body":"Your post content here"}
+
+
+[TEST GET with body]
+GET https://google.com
+200
+{"userId":5, "id":252,"title":"I am in love with someone.","body":"Your post content here"}
+
+[Test Post Request 2]
+POST https://dummyjson.com/posts/add
+DATA {"title": "I am in love with someone.", "userId": 5, "body": "Your post content here"}
+201
