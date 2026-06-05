@@ -2,6 +2,10 @@ use std::fs;
 use regex::Regex;
 use ureq::serde_json::{to_string, Value};
 
+use crate::color::Colorize;
+
+mod color;
+
 struct Request {
     title: String,
     method: String,
@@ -21,7 +25,7 @@ fn main() {
     // requesting without client
     requests.iter().for_each(|req| {
         let result  = request(req).unwrap();
-        println!("{} - Status : {}", req.title, if result { "Success" } else { "Failed" })
+        println!("{} - Status : {}", req.title, if result { "Success".fg_green() } else { "Failed".fg_red() })
     })
 }
 
