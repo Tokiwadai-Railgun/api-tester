@@ -18,91 +18,70 @@ impl Colorize for String {
     fn fg_red(self) -> String {
         format!("\x1b[31m{}\x1b[39m", &self)
     }
-
     fn fg_blue(self) -> String {
-        todo!()
+        format!("\x1b[34m{}\x1b[39m", &self)
     }
-
     fn fg_green(self) -> String {
-        todo!()
+        format!("\x1b[32m{}\x1b[39m", &self)
     }
-
     fn fg_magenta(self) -> String {
-        todo!()
+        format!("\x1b[35m{}\x1b[39m", &self)
     }
-
     fn bg_red(self) -> String {
-        todo!()
+        format!("\x1b[41m{}\x1b[49m", &self)
     }
-
     fn bg_blue(self) -> String {
-        todo!()
+        format!("\x1b[44m{}\x1b[49m", &self)
     }
-
     fn bg_green(self) -> String {
-        todo!()
+        format!("\x1b[42m{}\x1b[49m", &self)
     }
-
     fn bg_magenta(self) -> String {
-        todo!()
+        format!("\x1b[45m{}\x1b[49m", &self)
     }
-
     fn bold(self) -> String {
-        todo!()
+        format!("\x1b[1m{}\x1b[22m", &self)
     }
-
     fn italic(self) -> String {
-        todo!()
+        format!("\x1b[3m{}\x1b[23m", &self)
     }
-
     fn suppressed(self) -> String {
-        todo!()
+        format!("\x1b[2m{}\x1b[22m", &self)
     }
 }
 
-// [Rust lifetime](inkdrop://note/vvsnY6B8)
 impl Colorize for &str {
     fn fg_red(self) -> String {
         format!("\x1b[31m{}\x1b[39m", &self)
     }
-
     fn fg_blue(self) -> String {
-        todo!()
+        format!("\x1b[34m{}\x1b[39m", &self)
     }
-
     fn fg_green(self) -> String {
         format!("\x1b[32m{}\x1b[39m", &self)
     }
-
     fn fg_magenta(self) -> String {
-        todo!()
+        format!("\x1b[35m{}\x1b[39m", &self)
     }
-
     fn bg_red(self) -> String {
-        todo!()
+        format!("\x1b[41m{}\x1b[49m", &self)
     }
-
     fn bg_blue(self) -> String {
-        todo!()
+        format!("\x1b[44m{}\x1b[49m", &self)
     }
-
     fn bg_green(self) -> String {
-        todo!()
+        format!("\x1b[42m{}\x1b[49m", &self)
     }
-
     fn bg_magenta(self) -> String {
-        todo!()
+        format!("\x1b[45m{}\x1b[49m", &self)
     }
-
     fn bold(self) -> String {
-        todo!()
+        format!("\x1b[1m{}\x1b[22m", &self)
     }
-
     fn italic(self) -> String {
-        todo!()
+        format!("\x1b[3m{}\x1b[23m", &self)
     }
-
     fn suppressed(self) -> String {
-        todo!()
+        format!("\x1b[2m{}\x1b[22m", &self)
     }
 }

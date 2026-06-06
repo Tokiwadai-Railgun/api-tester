@@ -1,6 +1,6 @@
 use std::fs;
 use regex::Regex;
-use ureq::serde_json::{to_string, Value};
+use ureq::serde_json::Value;
 
 use crate::color::Colorize;
 
