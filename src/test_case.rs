@@ -34,18 +34,6 @@ impl From<&str> for Method {
 }
 
 #[derive(Debug)]
-pub struct TestResult {
-    success: bool,
-    content: String,
-}
-
-impl Display for TestResult {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        todo!()
-    }
-}
-
-#[derive(Debug)]
 pub struct TestCase<'a> {
     pub name: &'a str,
     pub method: Method,
@@ -55,7 +43,6 @@ pub struct TestCase<'a> {
     pub expected_response: Option<serde_json::Value>,
     pub headers: Option<HashMap<&'a str, &'a str>>,
     pub store_cookies: bool, // wether to store response cookies or not
-    pub result: Option<TestResult>,
 }
 
 impl Default for TestCase<'_> {
@@ -68,7 +55,6 @@ impl Default for TestCase<'_> {
             expected_response: Default::default(),
             headers: Default::default(),
             store_cookies: Default::default(),
-            result: Default::default(),
             expected_status: Default::default(),
         }
     }
@@ -106,14 +92,6 @@ enum ReadingMode {
 }
 
 pub fn parse_file(content: &'_ str) -> Vec<TestCase<'_>> {
-    // Split lignes par lignes
-    // un test commence par "["
-    // Ensuite trier par premier mot de la ligne
-    // <METHOD> <URL>
-    // DATA <DATA>
-    // RESPONSE <RESPONSE>
-    // HEADERS <HEADERS>
-
     let mut reading_mode = ReadingMode::Data;
 
     let mut cases_vec: Vec<TestCase> = Vec::new();
@@ -163,15 +141,35 @@ pub fn parse_file(content: &'_ str) -> Vec<TestCase<'_>> {
                             Anotation::ExpectedStatus(status) => {
                                 current_case.expected_status = status
                             }
-                            Anotation::ExpectedResponse(_) => {}
+                            Anotation::ExpectedResponse(first_line) => {
+                                let opening = line.chars().filter(|c| *c == '{').count();
+                                let closing = line.chars().filter(|c| *c == '}').count();
+
+                                // clear the current json value
+                                json_array = Vec::new();
+                                json_array.push(first_line);
+
+                                if line.ends_with('}') && opening == closing {
+                                    current_case.expected_response = Some(
+                                        serde_json::from_str(json_array.join("").as_str())
+                                            .unwrap_or_else(|_| {
+                                                panic!(
+                                                    "Unable to parse json data for test : {}, {}",
+                                                    current_case.name,
+                                                    json_array.join("")
+                                                )
+                                            }),
+                                    );
+                                } else {
+                                    reading_mode = ReadingMode::Json(opening, closing)
+                                }
+                            }
                         }
                     }
                 }
-
-                // TODO: Check for @notation to know which property to set
             }
             ReadingMode::Json(nb_opened, nb_closed) => {
-                json_array.push(line);
+                json_array.push(line.trim_matches('#'));
                 let opening = line.chars().filter(|c| *c == '{').count() + nb_opened;
                 let closing = line.chars().filter(|c| *c == '}').count() + nb_closed;
 
@@ -180,11 +178,17 @@ pub fn parse_file(content: &'_ str) -> Vec<TestCase<'_>> {
                 // Checking if the ended the json
                 if line.ends_with("}") && opening == closing {
                     reading_mode = ReadingMode::Data;
-                    current_case.body = Some(
+                    let full_json = Some(
                         serde_json::from_str(json_array.join("").as_str()).unwrap_or_else(|_| {
                             panic!("Unable to parse json data for test : {}", current_case.name)
                         }),
                     );
+
+                    if line.starts_with('#') {
+                        current_case.expected_response = full_json
+                    } else {
+                        current_case.body = full_json
+                    }
                 }
             }
         }
@@ -235,11 +239,15 @@ fn handle_comment(line: &'_ str) -> Option<Anotation<'_>> {
                             from_str(value).expect("Invalid status provided : not a number");
                         Some(Anotation::ExpectedStatus(number_status))
                     } else {
-                        panic!("Invalid anotation, usage : @expected-status <status>")
+                        panic!("Invalid anotation, usage : @expect-status <status>")
                     }
                 }
                 "@expect-response" => {
-                    todo!("Still need to be implemented")
+                    if let Some(rest) = line.splitn(3, ' ').nth(2) {
+                        Some(Anotation::ExpectedResponse(rest))
+                    } else {
+                        panic!("Invalid anotation, usage : @expect-status <status>")
+                    }
                 }
                 _ => None, // considering a simple regular comment with an @ here
             }

@@ -13,4 +13,10 @@ Content-Type: application/json
   "body": "Your post content here"
 }
 
-# @expect-status 202
+# @expect-status 201
+# @expect-response {
+# "userId":5, 
+# "id":252,
+# "title":"I am in love with someone.",
+# "body":"Your post content here"
+# }
