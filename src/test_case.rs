@@ -105,7 +105,7 @@ pub fn parse_file(content: &'_ str) -> Vec<TestCase<'_>> {
     for line in content.split("\n") {
         if line.starts_with("###") {
             if let ReadingMode::Json(_, _) = reading_mode {
-                panic!("Invalid JSON data given")
+                panic!("LINE {} : Invalid JSON data given", line_index)
             }
 
             if !current_case.name.is_empty() {
