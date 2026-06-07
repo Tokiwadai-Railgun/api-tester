@@ -6,36 +6,50 @@ This program is meant to test apis automatically by providing a file with urls a
 
 ## Planned
 * [ ] Add option to export test cases to excel or other files 
+* [ ] Add headers support
 
 # Usage
-First you'll need to write all your cases in a file with the following syntax 
-```
-[testName]
-<Method> url
-ExpectedStatus
-```
-then simply execute ``api-tester fileName``
+This tools accept a ``.http`` file following the [Guidelines](https://http-files.org/spec/basics/) along with two custom anotations.
 
-> [!note]
-> please not that you will need to remove all <> but not any []
+Test Names are in the separator, follow this [link](https://http-files.org/spec/separators/) for more info
 
-## Example
-### GET request
-requests.http
+> [!NOTE]
+> I'm placing here references to the http-files documentation, please keep in mind that not all syntax documented there will be applicable here. 
+
+Comments are only considered to start with "#" as of now
+
+## Anotations
+There are two anotations used for the test result comparaison : 
+- ``@expect-status <status>`` -> check for the response status **NEEDED IN EACH TEST CASE**
+- ``@expect-result <JsonResponse>`` -> check for the response body, Optional
+
+## Example file
 ```
-[Try to get cats]
-GET localhost:3000/cats
-200
+### Test 1
+GET https://google.com
+Content-Type: application/json
+# @expect-status 200
 
-### POST Request
-[Try to upload cats]
-POST localhost:3000/cats
-DATA {...}
-201
+### Test Post request
+POST https://dummyjson.com/posts/add
+Content-Type: application/json
+
+{
+  "title": "I am in love with someone.", 
+  "userId": 5, 
+  "body": "Your post content here"
+}
+
+# @expect-status 201
+# @expect-response {
+# "userId":5, 
+# "id":252,
+# "title":"I am in love with someone.",
+# "body":"Your post content here"
+# }
 ```
-
-``api-tester requests.http``
 
 
 # Notes :
-As this is a first project in rust it might not be optimal, expect bugs and not full functionalities
+This implementation does not aim to fully cover the cases or the syntax, simply provide a lightweight tester for my own api automated testing.
+Feel free to fork or open pull requests if you need more functionalities
