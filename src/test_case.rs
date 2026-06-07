@@ -100,6 +100,8 @@ pub fn parse_file(content: &'_ str) -> Vec<TestCase<'_>> {
     let mut current_case = TestCase::default();
     let mut json_array: Vec<&str> = Vec::new();
 
+    let mut line_index = 0;
+
     for line in content.split("\n") {
         if line.starts_with("###") {
             if let ReadingMode::Json(_, _) = reading_mode {
@@ -120,6 +122,7 @@ pub fn parse_file(content: &'_ str) -> Vec<TestCase<'_>> {
         match reading_mode {
             ReadingMode::Data => {
                 if line.is_empty() || line == "\n" {
+                    line_index += 1;
                     continue;
                 }
 
@@ -132,6 +135,7 @@ pub fn parse_file(content: &'_ str) -> Vec<TestCase<'_>> {
                     let (method, url) = extract_name_url(line);
                     current_case.method = method;
                     current_case.url = url;
+                    line_index += 1;
                     continue;
                 }
 
@@ -155,7 +159,8 @@ pub fn parse_file(content: &'_ str) -> Vec<TestCase<'_>> {
                                         serde_json::from_str(json_array.join("").as_str())
                                             .unwrap_or_else(|_| {
                                                 panic!(
-                                                    "Unable to parse json data for test : {}, {}",
+                                                    "LINE {} : Unable to parse json data for test : {}, {}",
+                                                    line_index,
                                                     current_case.name,
                                                     json_array.join("")
                                                 )
@@ -169,6 +174,8 @@ pub fn parse_file(content: &'_ str) -> Vec<TestCase<'_>> {
                             Anotation::SaveCookies => current_case.save_cookies = true
                         }
                     }
+
+                    line_index += 1;
                     continue;
                 }
 
@@ -178,8 +185,10 @@ pub fn parse_file(content: &'_ str) -> Vec<TestCase<'_>> {
                 if let Some(header_value) = line_split.next() {
                     current_case.headers.insert(header_name, header_value);
                 } else {
-                    panic!("Invalid header form on {}, please use : <headerName>: <HeaderValue>", line)
+                    panic!("LINE {} : Invalid header form on {}, please use : <headerName>: <HeaderValue>", line_index, line)
                 }
+
+                line_index += 1;
             }
             ReadingMode::Json(nb_opened, nb_closed) => {
                 json_array.push(line.trim_matches('#'));
@@ -193,7 +202,7 @@ pub fn parse_file(content: &'_ str) -> Vec<TestCase<'_>> {
                     reading_mode = ReadingMode::Data;
                     let full_json = Some(
                         serde_json::from_str(json_array.join("").as_str()).unwrap_or_else(|_| {
-                            panic!("Unable to parse json data for test : {}", current_case.name)
+                            panic!("LINE {} : Unable to parse json data for test : {}", line_index, current_case.name)
                         }),
                     );
 
@@ -243,6 +252,7 @@ fn handle_comment(line: &'_ str) -> Option<Anotation<'_>> {
     if !line.contains("@") {
         return None;
     }; // skip regular comments
+
     let mut iter = line.split(" ");
     let _ = iter.next();
     let anotation = iter.next();
