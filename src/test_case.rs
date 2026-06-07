@@ -222,12 +222,10 @@ pub fn parse_file(content: &'_ str) -> Vec<TestCase<'_>> {
                 );
 
                 // Checking if the ended the json
-                println!("line : {}, endswith : {}, opening : {}, closing : {}", line, line.ends_with("}"), opening_brace, closing_brace);
                 if (line.ends_with("}") || line.ends_with("]"))
                     && opening_bracket == closing_bracket
                     && opening_brace == closing_brace
                 {
-                    println!("TEST [{}] : Opening : {}, Closing : {}", current_case.name, opening_brace, closing_brace);
                     reading_mode = ReadingMode::Data;
                     let full_json = Some(
                         serde_json::from_str(json_array.join("").as_str()).unwrap_or_else(|_| {
