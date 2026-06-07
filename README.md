@@ -22,12 +22,13 @@ Comments are only considered to start with "#" as of now
 There are two anotations used for the test result comparaison : 
 - ``@expect-status <status>`` -> check for the response status **NEEDED IN EACH TEST CASE**
 - ``@expect-result <JsonResponse>`` -> check for the response body, Optional
+- ``@save-cookies`` -> Save the response cookies
+- ``@use-cookies`` -> Use the saved response cookies
 
 ## Example file
 ```http
 ### Test 1
 GET https://google.com
-Content-Type: application/json
 # @expect-status 200
 
 ### Test Post request
@@ -47,6 +48,25 @@ Content-Type: application/json
 # "title":"I am in love with someone.",
 # "body":"Your post content here"
 # }
+
+### Test login
+
+POST http://sample/api/login
+Content-Type: application/json
+
+{
+  "username": "test",
+  "password": "test"
+}
+
+# @expect-status 201
+# @save-cookies
+
+### Get all users
+
+GET http://sample/api/users
+# @expect-status 200
+# @use-cookies
 ```
 
 
