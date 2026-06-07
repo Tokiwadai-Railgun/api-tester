@@ -1,5 +1,5 @@
 use core::panic;
-use std::fs;
+use std::{collections::HashMap, fs};
 use ureq::serde_json::{self, Value};
 
 use crate::{
@@ -16,16 +16,19 @@ fn main() {
         panic!("Please precise a file as first argument")
     }
 
+    let mut cookies = String::new();
+
     match fs::read_to_string(format!("./{}", file_argument[1])) {
         Ok(content) => {
             let cases = parse_file(&content);
             for case in cases.iter() {
-                let test_result = request(case).unwrap_or_else(|e| {
+                let test_result = request(case, &mut cookies).unwrap_or_else(|e| {
                     panic!(
                         "Error querrying data for test : {}\n Error : {}",
                         case.name, e
                     )
                 });
+
                 match test_result {
                     (true, _) => println!("{} - Status : {}", case.name, "Success".fg_green()),
                     (false, response_data) => {
@@ -61,7 +64,10 @@ struct Response {
     body: Option<Value>,
 }
 
-fn request(test_case: &TestCase) -> Result<(bool, Response), Box<dyn std::error::Error>> {
+fn request(
+    test_case: &TestCase,
+    cookies: &mut String,
+) -> Result<(bool, Response), Box<dyn std::error::Error>> {
     match test_case.method {
         Method::Get => {
             let mut request = ureq::get(test_case.url);
@@ -69,6 +75,11 @@ fn request(test_case: &TestCase) -> Result<(bool, Response), Box<dyn std::error:
             for (name, value) in test_case.headers.iter() {
                 request = request.set(name, value);
             }
+
+            if test_case.use_cookies {
+                request = request.set("Cookie", cookies);
+            }
+
 
             // Needed to also return request that comes with an error status
             let response = match request.call() {
@@ -80,6 +91,7 @@ fn request(test_case: &TestCase) -> Result<(bool, Response), Box<dyn std::error:
 
             if let Some(expected_response) = &test_case.expected_response {
                 let body: Value = response.into_json()?;
+
                 let return_data = Response {
                     status,
                     body: Some(body.clone()),
@@ -100,6 +112,10 @@ fn request(test_case: &TestCase) -> Result<(bool, Response), Box<dyn std::error:
                 request = request.set(name, value);
             }
 
+            if test_case.use_cookies {
+                request = request.set("Cookie", cookies);
+            }
+
             let response = match &test_case.body {
                 Some(body) => match request.send_json(body) {
                     Ok(resp) => resp,
@@ -112,6 +128,15 @@ fn request(test_case: &TestCase) -> Result<(bool, Response), Box<dyn std::error:
                     Err(e) => return Err(e.into()),
                 },
             };
+
+            if test_case.save_cookies {
+                *cookies = response
+                    .all("Set-Cookie")
+                    .iter()
+                    .filter_map(|sc| sc.split(";").next())
+                    .collect::<Vec<_>>()
+                    .join("; ");
+            }
 
             let status = response.status();
             if let Some(expected_response) = &test_case.expected_response {

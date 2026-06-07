@@ -42,7 +42,8 @@ pub struct TestCase<'a> {
     pub expected_status: u16,
     pub expected_response: Option<serde_json::Value>,
     pub headers: HashMap<&'a str, &'a str>,
-    pub store_cookies: bool, // wether to store response cookies or not
+    pub save_cookies: bool, // wether to store response cookies or not
+    pub use_cookies: bool
 }
 
 impl Default for TestCase<'_> {
@@ -54,8 +55,9 @@ impl Default for TestCase<'_> {
             body: Default::default(),
             expected_response: Default::default(),
             headers: Default::default(),
-            store_cookies: Default::default(),
+            save_cookies: Default::default(),
             expected_status: Default::default(),
+            use_cookies: Default::default(),
         }
     }
 }
@@ -81,7 +83,7 @@ impl Display for TestCase<'_> {
             self.expected_status,
             self.expected_response,
             self.headers,
-            self.store_cookies
+            self.save_cookies
         )
     }
 }
@@ -163,6 +165,8 @@ pub fn parse_file(content: &'_ str) -> Vec<TestCase<'_>> {
                                     reading_mode = ReadingMode::Json(opening, closing)
                                 }
                             }
+                            Anotation::UseCookies => current_case.use_cookies = true,
+                            Anotation::SaveCookies => current_case.save_cookies = true
                         }
                     }
                     continue;
@@ -198,6 +202,8 @@ pub fn parse_file(content: &'_ str) -> Vec<TestCase<'_>> {
                     } else {
                         current_case.body = full_json
                     }
+
+                    json_array = Vec::new();
                 }
             }
         }
@@ -229,6 +235,8 @@ fn extract_name_url(line: &str) -> (Method, &str) {
 enum Anotation<'a> {
     ExpectedStatus(u16),
     ExpectedResponse(&'a str),
+    SaveCookies,
+    UseCookies
 }
 
 fn handle_comment(line: &'_ str) -> Option<Anotation<'_>> {
@@ -258,6 +266,8 @@ fn handle_comment(line: &'_ str) -> Option<Anotation<'_>> {
                         panic!("Invalid anotation, usage : @expect-status <status>")
                     }
                 }
+                "@save-cookies" => Some(Anotation::SaveCookies),
+                "@use-cookies" => Some(Anotation::UseCookies),
                 _ => None, // considering a simple regular comment with an @ here
             }
         }
