@@ -4,10 +4,12 @@ use ureq::serde_json::{self, Value};
 
 use crate::{
     color::Colorize,
+    compare::compare_jsons,
     test_case::{parse_file, Method, TestCase},
 };
 
 mod color;
+mod compare;
 mod test_case;
 
 fn main() {
@@ -80,7 +82,6 @@ fn request(
                 request = request.set("Cookie", cookies);
             }
 
-
             // Needed to also return request that comes with an error status
             let response = match request.call() {
                 Ok(resp) => resp,
@@ -97,7 +98,7 @@ fn request(
                     body: Some(body.clone()),
                 };
                 Ok((
-                    status == test_case.expected_status && body == *expected_response,
+                    status == test_case.expected_status && compare_jsons(expected_response, &body),
                     return_data,
                 ))
             } else {
@@ -147,7 +148,8 @@ fn request(
                 };
 
                 Ok((
-                    status == test_case.expected_status && response_body == *expected_response,
+                    status == test_case.expected_status
+                        && compare_jsons(expected_response, &response_body),
                     return_data,
                 ))
             } else {

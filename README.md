@@ -6,7 +6,6 @@ This program is meant to test apis automatically by providing a file with urls a
 
 ## Planned
 * [ ] Add option to export test cases to excel or other files 
-* [ ] Add headers support
 
 # Usage
 This tools accept a ``.http`` file following the [Guidelines](https://http-files.org/spec/basics/) along with two custom anotations.
@@ -69,6 +68,35 @@ GET http://sample/api/users
 # @use-cookies
 ```
 
+
+## Generic match
+For the times a perfect match is not suitable, you can verify by type instead. to do so simply put a string in the field you are trying to check and use one of the following option : 
+- ``\\string`` -> check for string
+- ``\\number`` -> check for any number (int, float, uint ....)
+- ``\\boolean`` -> check for any boolean 
+- ``\\bool`` -> alias of \\boolean
+- ``\\object`` -> check for any object
+- ``\\array`` -> check for any array
+
+### Example : 
+```http
+POST https://dummyjson.com/posts/add
+Content-Type: application/json
+
+{
+  "title": "I am in love with someone.", 
+  "userId": 5, 
+  "body": "Your post content here"
+}
+
+# @expect-status 201
+# @expect-response {
+# "userId": "\\number", 
+# "id":252,
+# "title":"\\string",
+# "body":"Your post content here"
+# }
+```
 
 # Notes :
 This implementation does not aim to fully cover the cases or the syntax, simply provide a lightweight tester for my own api automated testing.
