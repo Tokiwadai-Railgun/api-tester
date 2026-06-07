@@ -1,5 +1,5 @@
 use core::panic;
-use std::{collections::HashMap, fs};
+use std::fs;
 use ureq::serde_json::{self, Value};
 
 use crate::{

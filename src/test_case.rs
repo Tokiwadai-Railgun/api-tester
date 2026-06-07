@@ -43,7 +43,7 @@ pub struct TestCase<'a> {
     pub expected_response: Option<serde_json::Value>,
     pub headers: HashMap<&'a str, &'a str>,
     pub save_cookies: bool, // wether to store response cookies or not
-    pub use_cookies: bool
+    pub use_cookies: bool,
 }
 
 impl Default for TestCase<'_> {
@@ -89,7 +89,7 @@ impl Display for TestCase<'_> {
 }
 
 enum ReadingMode {
-    Json(usize, usize),
+    Json((usize, usize), (usize, usize)),
     Data,
 }
 
@@ -105,7 +105,10 @@ pub fn parse_file(content: &'_ str) -> Vec<TestCase<'_>> {
     for line in content.split("\n") {
         if line.starts_with("###") {
             if let ReadingMode::Json(_, _) = reading_mode {
-                panic!("LINE {} : Invalid JSON data given", line_index)
+                panic!(
+                    "LINE {} : Invalid JSON data given. \n Data : {:?}",
+                    line_index, json_array
+                )
             }
 
             if !current_case.name.is_empty() {
@@ -117,7 +120,7 @@ pub fn parse_file(content: &'_ str) -> Vec<TestCase<'_>> {
         }
 
         if line.starts_with("{") {
-            reading_mode = ReadingMode::Json(0, 0);
+            reading_mode = ReadingMode::Json((0, 0), (0, 0));
         }
         match reading_mode {
             ReadingMode::Data => {
@@ -147,14 +150,20 @@ pub fn parse_file(content: &'_ str) -> Vec<TestCase<'_>> {
                                 current_case.expected_status = status
                             }
                             Anotation::ExpectedResponse(first_line) => {
-                                let opening = line.chars().filter(|c| *c == '{').count();
-                                let closing = line.chars().filter(|c| *c == '}').count();
+                                let opening_bracket = line.chars().filter(|c| *c == '[').count();
+                                let closing_bracket = line.chars().filter(|c| *c == ']').count();
+
+                                let opening_brace = line.chars().filter(|c| *c == '}').count();
+                                let closing_brace = line.chars().filter(|c| *c == '}').count();
 
                                 // clear the current json value
                                 json_array = Vec::new();
                                 json_array.push(first_line);
 
-                                if line.ends_with('}') && opening == closing {
+                                if line.ends_with('}')
+                                    && opening_bracket == closing_bracket
+                                    && opening_brace == closing_brace
+                                {
                                     current_case.expected_response = Some(
                                         serde_json::from_str(json_array.join("").as_str())
                                             .unwrap_or_else(|_| {
@@ -167,11 +176,14 @@ pub fn parse_file(content: &'_ str) -> Vec<TestCase<'_>> {
                                             }),
                                     );
                                 } else {
-                                    reading_mode = ReadingMode::Json(opening, closing)
+                                    reading_mode = ReadingMode::Json(
+                                        (opening_brace, closing_brace),
+                                        (opening_bracket, closing_bracket),
+                                    );
                                 }
                             }
                             Anotation::UseCookies => current_case.use_cookies = true,
-                            Anotation::SaveCookies => current_case.save_cookies = true
+                            Anotation::SaveCookies => current_case.save_cookies = true,
                         }
                     }
 
@@ -190,19 +202,36 @@ pub fn parse_file(content: &'_ str) -> Vec<TestCase<'_>> {
 
                 line_index += 1;
             }
-            ReadingMode::Json(nb_opened, nb_closed) => {
+            ReadingMode::Json(
+                (nb_opened_brace, nb_closed_brace),
+                (nb_opened_bracket, nb_closed_bracket),
+            ) => {
                 json_array.push(line.trim_matches('#'));
-                let opening = line.chars().filter(|c| *c == '{').count() + nb_opened;
-                let closing = line.chars().filter(|c| *c == '}').count() + nb_closed;
+                let opening_bracket =
+                    line.chars().filter(|c| *c == '[').count() + nb_opened_bracket;
+                let closing_bracket =
+                    line.chars().filter(|c| *c == ']').count() + nb_closed_bracket;
 
-                reading_mode = ReadingMode::Json(opening, closing);
+                let opening_brace = line.chars().filter(|c| *c == '}').count() + nb_opened_brace;
+                let closing_brace = line.chars().filter(|c| *c == '}').count() + nb_closed_brace;
+
+                reading_mode = ReadingMode::Json(
+                    (opening_brace, closing_brace),
+                    (opening_bracket, closing_bracket),
+                );
 
                 // Checking if the ended the json
-                if line.ends_with("}") && opening == closing {
+                if line.ends_with("}")
+                    && opening_bracket == closing_bracket
+                    && opening_brace == closing_brace
+                {
                     reading_mode = ReadingMode::Data;
                     let full_json = Some(
                         serde_json::from_str(json_array.join("").as_str()).unwrap_or_else(|_| {
-                            panic!("LINE {} : Unable to parse json data for test : {}", line_index, current_case.name)
+                            panic!(
+                                "LINE {} : Unable to parse json data for test : {}",
+                                line_index, current_case.name
+                            )
                         }),
                     );
 
@@ -245,7 +274,7 @@ enum Anotation<'a> {
     ExpectedStatus(u16),
     ExpectedResponse(&'a str),
     SaveCookies,
-    UseCookies
+    UseCookies,
 }
 
 fn handle_comment(line: &'_ str) -> Option<Anotation<'_>> {
