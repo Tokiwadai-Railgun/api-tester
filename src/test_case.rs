@@ -153,14 +153,14 @@ pub fn parse_file(content: &'_ str) -> Vec<TestCase<'_>> {
                                 let opening_bracket = line.chars().filter(|c| *c == '[').count();
                                 let closing_bracket = line.chars().filter(|c| *c == ']').count();
 
-                                let opening_brace = line.chars().filter(|c| *c == '}').count();
+                                let opening_brace = line.chars().filter(|c| *c == '{').count();
                                 let closing_brace = line.chars().filter(|c| *c == '}').count();
 
                                 // clear the current json value
                                 json_array = Vec::new();
                                 json_array.push(first_line);
 
-                                if line.ends_with('}')
+                                if (line.ends_with('}') || line.ends_with(']'))
                                     && opening_bracket == closing_bracket
                                     && opening_brace == closing_brace
                                 {
@@ -206,13 +206,14 @@ pub fn parse_file(content: &'_ str) -> Vec<TestCase<'_>> {
                 (nb_opened_brace, nb_closed_brace),
                 (nb_opened_bracket, nb_closed_bracket),
             ) => {
+                line_index += 1;
                 json_array.push(line.trim_matches('#'));
                 let opening_bracket =
                     line.chars().filter(|c| *c == '[').count() + nb_opened_bracket;
                 let closing_bracket =
                     line.chars().filter(|c| *c == ']').count() + nb_closed_bracket;
 
-                let opening_brace = line.chars().filter(|c| *c == '}').count() + nb_opened_brace;
+                let opening_brace = line.chars().filter(|c| *c == '{').count() + nb_opened_brace;
                 let closing_brace = line.chars().filter(|c| *c == '}').count() + nb_closed_brace;
 
                 reading_mode = ReadingMode::Json(
@@ -221,10 +222,12 @@ pub fn parse_file(content: &'_ str) -> Vec<TestCase<'_>> {
                 );
 
                 // Checking if the ended the json
-                if line.ends_with("}")
+                println!("line : {}, endswith : {}, opening : {}, closing : {}", line, line.ends_with("}"), opening_brace, closing_brace);
+                if (line.ends_with("}") || line.ends_with("]"))
                     && opening_bracket == closing_bracket
                     && opening_brace == closing_brace
                 {
+                    println!("TEST [{}] : Opening : {}, Closing : {}", current_case.name, opening_brace, closing_brace);
                     reading_mode = ReadingMode::Data;
                     let full_json = Some(
                         serde_json::from_str(json_array.join("").as_str()).unwrap_or_else(|_| {
