@@ -1,6 +1,5 @@
 ### Test 1
 GET https://google.com
-Content-Type: application/json
 # @expect-status 200
 
 ### Test Post request

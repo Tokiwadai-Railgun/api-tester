@@ -24,7 +24,7 @@ There are two anotations used for the test result comparaison :
 - ``@expect-result <JsonResponse>`` -> check for the response body, Optional
 
 ## Example file
-```
+```http
 ### Test 1
 GET https://google.com
 Content-Type: application/json

@@ -41,7 +41,7 @@ pub struct TestCase<'a> {
     pub body: Option<serde_json::Value>,
     pub expected_status: u16,
     pub expected_response: Option<serde_json::Value>,
-    pub headers: Option<HashMap<&'a str, &'a str>>,
+    pub headers: HashMap<&'a str, &'a str>,
     pub store_cookies: bool, // wether to store response cookies or not
 }
 
@@ -130,9 +130,8 @@ pub fn parse_file(content: &'_ str) -> Vec<TestCase<'_>> {
                     let (method, url) = extract_name_url(line);
                     current_case.method = method;
                     current_case.url = url;
+                    continue;
                 }
-
-                // Headers
 
                 // annotation
                 if line.starts_with("#") {
@@ -166,6 +165,16 @@ pub fn parse_file(content: &'_ str) -> Vec<TestCase<'_>> {
                             }
                         }
                     }
+                    continue;
+                }
+
+                // Headers
+                let mut line_split = line.split(':');
+                let header_name = line_split.next().unwrap();
+                if let Some(header_value) = line_split.next() {
+                    current_case.headers.insert(header_name, header_value);
+                } else {
+                    panic!("Invalid header form on {}, please use : <headerName>: <HeaderValue>", line)
                 }
             }
             ReadingMode::Json(nb_opened, nb_closed) => {

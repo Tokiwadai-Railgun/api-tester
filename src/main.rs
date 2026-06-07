@@ -64,11 +64,22 @@ struct Response {
 fn request(test_case: &TestCase) -> Result<(bool, Response), Box<dyn std::error::Error>> {
     match test_case.method {
         Method::Get => {
-            let req = ureq::get(test_case.url).call()?;
-            let status = req.status();
+            let mut request = ureq::get(test_case.url);
+
+            for (name, value) in test_case.headers.iter() {
+                request = request.set(name, value);
+            }
+
+            // Needed to also return request that comes with an error status
+            let response = match request.call() {
+                Ok(resp) => resp,
+                Err(ureq::Error::Status(_, resp)) => resp,
+                Err(e) => return Err(e.into()),
+            };
+            let status = response.status();
 
             if let Some(expected_response) = &test_case.expected_response {
-                let body: Value = req.into_json()?;
+                let body: Value = response.into_json()?;
                 let return_data = Response {
                     status,
                     body: Some(body.clone()),
@@ -83,11 +94,23 @@ fn request(test_case: &TestCase) -> Result<(bool, Response), Box<dyn std::error:
             }
         }
         Method::Post => {
+            let mut request = ureq::post(test_case.url);
+
+            for (name, value) in test_case.headers.iter() {
+                request = request.set(name, value);
+            }
+
             let response = match &test_case.body {
-                Some(body) => ureq::post(test_case.url)
-                    .set("Content-Type", "application/json")
-                    .send_json(body)?,
-                None => ureq::post(test_case.url).call()?,
+                Some(body) => match request.send_json(body) {
+                    Ok(resp) => resp,
+                    Err(ureq::Error::Status(_, resp)) => resp,
+                    Err(e) => return Err(e.into()),
+                },
+                None => match request.call() {
+                    Ok(resp) => resp,
+                    Err(ureq::Error::Status(_, resp)) => resp,
+                    Err(e) => return Err(e.into()),
+                },
             };
 
             let status = response.status();
@@ -109,8 +132,4 @@ fn request(test_case: &TestCase) -> Result<(bool, Response), Box<dyn std::error:
         }
         _ => panic!("Method not supported"),
     }
-}
-
-fn print_type_of<T>(_: &T) {
-    println!("Type is : {}", std::any::type_name::<T>())
 }
