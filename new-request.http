@@ -1,0 +1,11 @@
+### Test 1
+GET https://google.com
+Content-Type: application/json
+# @expect-status 200
+
+### Test Post request
+POST https://dummyjson.com/posts/add
+Content-Type: application/json
+
+{"title": "I am in love with someone.", "userId": 5, "body": "Your post content here"}
+# @expect-status 201

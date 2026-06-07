@@ -1,10 +1,12 @@
+use core::panic;
 use std::fs;
 use regex::Regex;
 use ureq::serde_json::Value;
 
-use crate::color::Colorize;
+use crate::{color::Colorize, test_case::parse_file};
 
 mod color;
+mod test_case;
 
 struct Request {
     title: String,
@@ -19,14 +21,25 @@ fn main() {
     if file_argument.len() < 2 {panic!("Please precise a file as first argument")}
 
 
-    let requests = read_file_content(format!("./{}", file_argument[1])).unwrap();
-
-
-    // requesting without client
-    requests.iter().for_each(|req| {
-        let result  = request(req).unwrap();
-        println!("{} - Status : {}", req.title, if result { "Success".fg_green() } else { "Failed".fg_red() })
-    })
+    match fs::read_to_string(format!("./{}", file_argument[1])) {
+        Ok(content) => {
+            let cases = parse_file(&content);
+            for case in cases.iter() {
+                println!("The case is : {case}")
+            }
+        }
+        Err(e) => {
+            panic!("An error occured : {}", e);
+        }
+    };
+    // let requests = read_file_content(format!("./{}", file_argument[1])).unwrap();
+    //
+    //
+    // // requesting without client
+    // requests.iter().for_each(|req| {
+    //     let result  = request(req).unwrap();
+    //     println!("{} - Status : {}", req.title, if result { "Success".fg_green() } else { "Failed".fg_red() })
+    // })
 }
 
 fn request(request_data: &Request) -> Result<bool, Box<dyn std::error::Error>> {
