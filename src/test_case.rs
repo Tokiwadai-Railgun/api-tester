@@ -1,13 +1,13 @@
 use std::{collections::HashMap, fmt::Display};
 
-use ureq::serde_json::from_str;
+use ureq::serde_json::{self, from_str};
 
 #[derive(Debug)]
 pub enum Method {
     Get,
     Post,
     Put,
-    DELETE,
+    Delete,
 }
 
 impl Display for Method {
@@ -16,7 +16,7 @@ impl Display for Method {
             Method::Get => write!(f, "GET"),
             Method::Post => write!(f, "POST"),
             Method::Put => write!(f, "PUT"),
-            Method::DELETE => write!(f, "DELETE"),
+            Method::Delete => write!(f, "DELETE"),
         }
     }
 }
@@ -27,7 +27,7 @@ impl From<&str> for Method {
             "GET" => Method::Get,
             "POST" => Method::Post,
             "PUT" => Method::Put,
-            "DELETE" => Method::DELETE,
+            "DELETE" => Method::Delete,
             e => panic!("Invalid method provided : {}", e),
         }
     }
@@ -47,15 +47,15 @@ impl Display for TestResult {
 
 #[derive(Debug)]
 pub struct TestCase<'a> {
-    name: &'a str,
-    method: Method,
-    url: &'a str,
-    body: Option<&'a str>,
-    expected_status: u16,
-    expected_response: Option<&'a str>,
-    headers: Option<HashMap<&'a str, &'a str>>,
-    store_cookies: bool, // wether to store response cookies or not
-    result: Option<TestResult>,
+    pub name: &'a str,
+    pub method: Method,
+    pub url: &'a str,
+    pub body: Option<serde_json::Value>,
+    pub expected_status: u16,
+    pub expected_response: Option<serde_json::Value>,
+    pub headers: Option<HashMap<&'a str, &'a str>>,
+    pub store_cookies: bool, // wether to store response cookies or not
+    pub result: Option<TestResult>,
 }
 
 impl Default for TestCase<'_> {
@@ -101,7 +101,7 @@ impl Display for TestCase<'_> {
 }
 
 enum ReadingMode {
-    Json(u8, u8),
+    Json(usize, usize),
     Data,
 }
 
@@ -118,6 +118,8 @@ pub fn parse_file(content: &'_ str) -> Vec<TestCase<'_>> {
 
     let mut cases_vec: Vec<TestCase> = Vec::new();
     let mut current_case = TestCase::default();
+    let mut json_array: Vec<&str> = Vec::new();
+
     for line in content.split("\n") {
         if line.starts_with("###") {
             if let ReadingMode::Json(_, _) = reading_mode {
@@ -158,7 +160,9 @@ pub fn parse_file(content: &'_ str) -> Vec<TestCase<'_>> {
                 if line.starts_with("#") {
                     if let Some(data) = handle_comment(line) {
                         match data {
-                            Anotation::ExpectedStatus(status) => current_case.expected_status = status,
+                            Anotation::ExpectedStatus(status) => {
+                                current_case.expected_status = status
+                            }
                             Anotation::ExpectedResponse(_) => {}
                         }
                     }
@@ -167,12 +171,20 @@ pub fn parse_file(content: &'_ str) -> Vec<TestCase<'_>> {
                 // TODO: Check for @notation to know which property to set
             }
             ReadingMode::Json(nb_opened, nb_closed) => {
-                // TODO: Accumulate all the lines in a single buffer and save it
+                json_array.push(line);
+                let opening = line.chars().filter(|c| *c == '{').count() + nb_opened;
+                let closing = line.chars().filter(|c| *c == '}').count() + nb_closed;
+
+                reading_mode = ReadingMode::Json(opening, closing);
 
                 // Checking if the ended the json
-                if line.ends_with("}") {
-                    // if line.ends_with("}") && nb_opened == nb_closed - 1 {
+                if line.ends_with("}") && opening == closing {
                     reading_mode = ReadingMode::Data;
+                    current_case.body = Some(
+                        serde_json::from_str(json_array.join("").as_str()).unwrap_or_else(|_| {
+                            panic!("Unable to parse json data for test : {}", current_case.name)
+                        }),
+                    );
                 }
             }
         }
@@ -203,7 +215,7 @@ fn extract_name_url(line: &str) -> (Method, &str) {
 
 enum Anotation<'a> {
     ExpectedStatus(u16),
-    ExpectedResponse(&'a  str)
+    ExpectedResponse(&'a str),
 }
 
 fn handle_comment(line: &'_ str) -> Option<Anotation<'_>> {
@@ -219,7 +231,8 @@ fn handle_comment(line: &'_ str) -> Option<Anotation<'_>> {
             match value {
                 "@expect-status" => {
                     if let Some(value) = iter.next() {
-                        let number_status: u16 = from_str(value).expect("Invalid status provided : not a number");
+                        let number_status: u16 =
+                            from_str(value).expect("Invalid status provided : not a number");
                         Some(Anotation::ExpectedStatus(number_status))
                     } else {
                         panic!("Invalid anotation, usage : @expected-status <status>")
