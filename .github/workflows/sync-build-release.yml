@@ -2,7 +2,7 @@ name: Sync + Build + Release
 
 on:
   schedule:
-    - cron: "0 3 * * *"
+    - cron: "0 3 * * *" # Vérifie tous les jours à 3h du matin
   workflow_dispatch:
 
 jobs:
@@ -47,17 +47,20 @@ jobs:
         run: git push origin main
 
       - name: Install Rust
+        if: steps.changes.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Build Windows binary  # ← tourne toujours
+      - name: Build Windows binary
+        if: steps.changes.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
         run: cargo build --release
 
-      - name: Create Release  # ← seulement si upstream a changé
-        if: steps.changes.outputs.changed == 'true'
+      - name: Create Release
+        # Crée la release uniquement si un changement est détecté OU si tu as lancé l'action manuellement
+        if: steps.changes.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: "build-${{ github.run_number }}"
-          name: "Automated build ${{ github.run_number }}"
+          name: "Windows Build" # Titre affiché modifié selon ton souhait
           files: target/release/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
