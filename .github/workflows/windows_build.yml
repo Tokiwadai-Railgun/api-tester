@@ -1,21 +1,23 @@
-name: Windows Build
+name: Build
 
 on:
   push:
     tags:
       - "v*"
-    workflow_dispatch:
-      inputs:
-        tag_name:
-          description: "Nom du tag pour la release"
-          required: true
-          default: "v0.0.0"
 
 jobs:
-  build-release:
-    runs-on: windows-latest
-    permissions:
-      contents: write
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            artifact_name: mon-app.exe
+            path: target/release/mon-app.exe
+          - os: ubuntu-latest
+            artifact_name: mon-app
+            path: target/release/mon-app
 
     steps:
       - name: Checkout
@@ -24,14 +26,31 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Build Windows binary
+      - name: Build binary
         run: cargo build --release
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.os }}
+          path: ${{ matrix.path }}
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: "Windows Build ${{ github.ref_name }}"
-          files: target/release/*.exe
+          files: artifacts/**/*
+          body: "Release automatique pour Windows et Linux."
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
