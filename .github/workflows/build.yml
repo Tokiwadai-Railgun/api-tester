@@ -13,11 +13,11 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            artifact_name: mon-app.exe
-            path: target/release/mon-app.exe
+            artifact_name: api-tester.exe
+            path: target/release/*.exe
           - os: ubuntu-latest
-            artifact_name: mon-app
-            path: target/release/mon-app
+            artifact_name: api-tester
+            path: target/release/api-tester
 
     steps:
       - name: Checkout
