@@ -15,9 +15,11 @@ jobs:
           - os: windows-latest
             artifact_name: api-tester_${{ github.ref_name }}_windows.exe
             path: target/release/api-tester_${{ github.ref_name }}_windows.exe
+            cargo_binary_name: api-tester.exe
           - os: ubuntu-latest
             artifact_name: api-tester_${{ github.ref_name }}_linux_x86 
             path: target/release/api-tester_${{ github.ref_name }}_linux_x86
+            cargo_binary_name: api-tester
 
     steps:
       - name: Checkout
@@ -28,6 +30,9 @@ jobs:
 
       - name: Build binary
         run: cargo build --release
+      
+      - name: Rename binary
+        run: mv target/release/${{ matrix.cargo_binary_name }} ${{ matrix.path }}
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
