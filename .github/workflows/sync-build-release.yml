@@ -1,0 +1,62 @@
+name: Sync + Build + Release
+
+on:
+  schedule:
+    - cron: "0 3 * * *"  # chaque jour
+  workflow_dispatch:
+
+jobs:
+  sync-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set git config
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream and fetch
+        run: |
+          git remote add upstream https://github.com/Tokiwadai-Railgun/api-tester.git
+          git fetch upstream
+
+      - name: Merge upstream
+        run: |
+          git checkout main
+          git merge upstream/main --no-edit
+
+      - name: Check if changes exist
+        id: changes
+        run: |
+          if git diff --quiet HEAD~1 HEAD; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Push updates
+        if: steps.changes.outputs.changed == 'true'
+        run: git push origin main
+
+      - name: Install Rust
+        if: steps.changes.outputs.changed == 'true'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Windows binary
+        if: steps.changes.outputs.changed == 'true'
+        run: cargo build --release
+
+      - name: Create Release
+        if: steps.changes.outputs.changed == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "build-${{ github.run_number }}"
+          name: "Automated build ${{ github.run_number }}"
+          files: target/release/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
