@@ -102,7 +102,7 @@ pub fn parse_file(content: &'_ str) -> Vec<TestCase<'_>> {
 
     let mut line_index = 0;
 
-    for line in content.split("\n") {
+    for line in content.split("\n").map(|l| l.trim_end_matches('\r')) {
         if line.starts_with("###") {
             if let ReadingMode::Json(_, _) = reading_mode {
                 panic!(
@@ -124,7 +124,7 @@ pub fn parse_file(content: &'_ str) -> Vec<TestCase<'_>> {
         }
         match reading_mode {
             ReadingMode::Data => {
-                if line.is_empty() || line == "\n" {
+                if line.is_empty() {
                     line_index += 1;
                     continue;
                 }
