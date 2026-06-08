@@ -1,6 +1,3 @@
-> [!WARNING]
-> This repo is for windows compatible build only
-
 # A simple cli to test http apis using. 
 This program is meant to test apis automatically by providing a file with urls and expected status, it will so query all urls and compare what is expected for every case returning it in the console
 
