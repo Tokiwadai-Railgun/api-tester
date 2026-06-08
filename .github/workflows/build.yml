@@ -13,11 +13,11 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            artifact_name: api-tester.exe
-            path: target/release/*.exe
+            artifact_name: api-tester_${{ github.ref_name }}_windows.exe
+            path: target/release/api-tester_${{ github.ref_name }}_windows.exe
           - os: ubuntu-latest
-            artifact_name: api-tester
-            path: target/release/api-tester
+            artifact_name: api-tester_${{ github.ref_name }}_linux_x86 
+            path: target/release/api-tester_${{ github.ref_name }}_linux_x86
 
     steps:
       - name: Checkout
@@ -51,6 +51,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: artifacts/**/*
-          body: "Release automatique pour Windows et Linux."
+          draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
