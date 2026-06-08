@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v*"
+    workflow_dispatch:
+      inputs:
+        tag_name:
+          description: "Nom du tag pour la release"
+          required: true
+          default: "v0.0.0"
 
 jobs:
   build-release:
