@@ -2,18 +2,21 @@ name: Sync + Build + Release
 
 on:
   schedule:
-    - cron: "0 3 * * *"  # chaque jour
+    - cron: "0 3 * * *"
   workflow_dispatch:
 
 jobs:
   sync-build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
+    permissions:
+      contents: write  # nécessaire pour push + créer une release
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set git config
         run: |
@@ -25,19 +28,19 @@ jobs:
           git remote add upstream https://github.com/Tokiwadai-Railgun/api-tester.git
           git fetch upstream
 
-      - name: Merge upstream
-        run: |
-          git checkout main
-          git merge upstream/main --no-edit
-
-      - name: Check if changes exist
+      - name: Merge upstream et détecter les changements
         id: changes
         run: |
-          if git diff --quiet HEAD~1 HEAD; then
-            echo "changed=false" >> $GITHUB_OUTPUT
-          else
-            echo "changed=true" >> $GITHUB_OUTPUT
-          fi
+          $before = git rev-parse HEAD
+          git checkout main
+          git merge upstream/main --no-edit
+          $after = git rev-parse HEAD
+          if ($before -ne $after) {
+            echo "changed=true" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "changed=false" >> $env:GITHUB_OUTPUT
+          }
+        shell: pwsh
 
       - name: Push updates
         if: steps.changes.outputs.changed == 'true'
@@ -48,7 +51,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Build Windows binary
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.changes.outputs.changed == 'true'  # ← manquait ici
         run: cargo build --release
 
       - name: Create Release
