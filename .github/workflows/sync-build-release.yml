@@ -9,7 +9,7 @@ jobs:
   sync-build:
     runs-on: windows-latest
     permissions:
-      contents: write  # nécessaire pour push + créer une release
+      contents: write
 
     steps:
       - name: Checkout
@@ -47,14 +47,12 @@ jobs:
         run: git push origin main
 
       - name: Install Rust
-        if: steps.changes.outputs.changed == 'true'
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Build Windows binary
-        if: steps.changes.outputs.changed == 'true'  # ← manquait ici
+      - name: Build Windows binary  # ← tourne toujours
         run: cargo build --release
 
-      - name: Create Release
+      - name: Create Release  # ← seulement si upstream a changé
         if: steps.changes.outputs.changed == 'true'
         uses: softprops/action-gh-release@v2
         with:
